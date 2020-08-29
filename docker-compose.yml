@@ -1,0 +1,65 @@
+version: "3.2"
+
+services:
+  # Database
+  db:
+    image: mysql:8
+    container_name: ${COMPOSE_PROJECT_NAME}-mysql
+    restart: always
+    volumes:
+      - mysql:/var/lib/mysql
+    command: "--default-authentication-plugin=mysql_native_password"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    networks:
+      - backend
+
+  # Custom image container
+  web:
+    depends_on:
+      - db
+    build:
+      context: .
+    image: jeffmlazo/docker-codeigniter:1.0.1
+    container_name: ${COMPOSE_PROJECT_NAME}-app
+    restart: always
+    volumes:
+      - ./config/php.conf.ini:/usr/local/etc/php/conf.d/php.ini
+      - ./config/apache.conf:/etc/apache2/sites-available/000-default.conf
+      - ./www:/var/www/html
+    environment:
+      MYSQL_HOST: ${COMPOSE_PROJECT_NAME}-mysql
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "8000:80"
+      - "443:443"
+    networks:
+      - frontend
+      - backend
+
+  # Database management tool
+  adminer:
+    depends_on:
+      - db
+    image: adminer
+    restart: always
+    environment:
+      ADMINER_DESIGN: "pepa-linha"
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  mysql:
